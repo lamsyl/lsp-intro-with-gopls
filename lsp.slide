@@ -1,0 +1,260 @@
+# Language Server Protocol
+
+## What is LSP?
+
+- Developed by Microsoft
+- Standardized in 2016
+- Protocol for providing language features
+  - Auto complete
+  - Go to definition
+  - Find all references
+  - ...
+- Supported by many Editors
+  - VSCode
+  - NeoVim
+  - Emacs
+  - ...
+
+## gopls
+
+- gopls is a language server for Go
+- conform to LSP
+
+[VSCode Go extension](https://marketplace.visualstudio.com/items?itemName=golang.Go)
+
+> The extension depends on go, gopls (the Go language server), and optional tools depending on your settings. If gopls is missing, the extension will try to install it.
+
+## Why LSP?
+
+.image lsp-mn.png 400 _
+
+## Jetbrains: Why not LSP?
+
+[LSP for Plugin Developers](https://blog.jetbrains.com/platform/2023/07/lsp-for-plugin-developers/)
+
+> IntelliJ Platform still offers a wider range of integration with IDE features
+
+> The integration with the Language Server Protocol is created as an extension to the **paid** IntelliJ-based IDEs
+
+.image JetBrains-logo.svg 200 _
+
+## The Protocol
+
+- JSON-RPC 2.0
+- Request & Response
+- Notification
+
+.image language-server-sequence.png 350 _
+
+## Request
+
+Make a "Go to definition" request to gopls
+
+: methods defined in LSP spec
+: expect same id in response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id" : 919,
+    "method": "textDocument/definition",
+    "params": {
+      "textDocument": {
+        "uri": "file:///USERHOME/play/gotools/gopls/internal/protocol/tsserver.go"
+      },
+      "position": {
+        "line": 97,
+        "character": 15
+      }
+    }
+}
+```
+
+## RPC Dispatch
+
+`gopls/internal/protocol/tsserver.go`
+
+```go
+func serverDispatch(
+  ctx context.Context, server Server, reply jsonrpc2.Replier, r jsonrpc2.Request
+) (bool, error) {
+	switch r.Method() {
+		case "textDocument/definition":
+		var params DefinitionParams
+		if err := UnmarshalJSON(r.Params(), &params); err != nil {
+			return true, sendParseError(ctx, reply, err)
+		}
+		resp, err := server.Definition(ctx, &params)
+		if err != nil {
+			return true, reply(ctx, nil, err)
+		}
+		return true, reply(ctx, resp, nil)
+  }
+}
+```
+
+## Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 919,
+    "result": [
+      {
+        "uri": "file:///USERHOME/go/pkg/mod/golang.org/x/tools@vX/internal/jsonrpc2/messages.go",
+        "range": {
+          "start": { "line": 28, "character": 1 },
+          "end": { "line": 28, "character": 7 }
+        }
+      }
+    ]
+}
+```
+
+## Notification
+
+: without id
+: no acknowledgement
+
+```json
+{
+    "jsonrpc": "2.0",
+    "method": "textDocument/publishDiagnostics",
+    "params": {
+        "uri": "file:///USERHOME/play/gotools/gopls/internal/server/definition.go",
+        "version": 2,
+        "diagnostics": [
+          {
+            "range": {
+              "start": { "line": 19, "character": 32 },
+              "end": { "line": 19, "character": 46 }
+            },
+            "severity": 1,
+            "code": "UndeclaredName",
+            "codeDescription": {
+              "href":"https://pkg.go.dev/golang.org/x/tools/internal/typesinternal#UndeclaredName"
+            },
+            "source": "compiler",
+            "message": "undefined: contextContext"
+          }
+        ]
+    }
+}
+```
+
+## Editor → Language Server
+
+- RPC client: Editor
+- RPC server: Language server
+
+Request:
+
+- textDocument/definition
+
+Notification:
+
+- textDocument/didChange
+
+## Language Server → Editor
+
+- RPC client: Language server
+- RPC server: Editor
+
+Request:
+
+- workspace/inlayHint/refresh
+
+Notification:
+
+- textDocument/publishDiagnostics
+
+## Demo
+
+: neovim
+: cmd = { "gopls", "-rpc.trace", "-logfile=trace.log" }
+: go to definition
+: edit and see diagnostics
+
+: vscode
+: "go.languageServerFlags": ["-rpc.trace"]
+: see trace in panel output
+: go to definition
+: edit and see diagnostics
+
+: gopls does not care about the editor
+: same response
+: decouple presentation from logic
+
+: editor can swap to any language server as long as it conform to LSP
+
+: nvim main.go
+: [Trace - 18:54:23.767 PM] Sending request 'initialize - (1)'
+: first request from editor to a language server
+: close neovim
+: shutdown and exit
+
+## Server lifecycle
+
+// ```mermaid
+// sequenceDiagram
+//     Editor->>Language Server: Request: initialize
+//     Language Server->>Editor: Response: InitializeResult
+//     Editor->>Language Server: Notification: initialized
+//     Note over Editor,Language Server: LSP requests & notifications
+//     Editor->>Language Server: Request: shutdown
+//     Language Server->>Editor: Response: null
+//     Editor->>Language Server: Notification: exit
+// ```
+
+.image server-lifecycle.png
+
+## Initialization
+
+Request **initialize**
+
+- Exchange capabilities
+  - `ClientCapabilities` `workspace.inlayHint.refreshSupport`
+
+      ⇒ `workspace/inlayHint/refresh` from language server
+  - `ServerCapabilities` `hoverProvider`
+
+      ⇒ `textDocument/hover` from editor
+- gopls setup workspace folder, initialize state and pending folders
+
+Notification **initialized**
+
+- gopls build views for pending folders, perform initial analysis and publish diagnostics
+- Both client and server are ready to communicate
+
+: Initialized -> addFolders -> addView -> diagnoseSnapshot
+
+## Shutdown
+
+Request **shutdown**
+
+- Editor is closing
+- gopls clean up resources, including active views
+
+: s.session.Shutdown(ctx)
+
+Notification **exit**
+
+- Editor is really closed
+
+## Summary
+
+LSP
+- Standard format for providing language features
+- Language server ↔ Editor via JSON-RPC 2.0
+- Request & Response
+- Notification
+- Server lifecycle
+- Capabilities
+
+## Explore more
+
+TJ DeVries - Learn By Building: Language Server Protocol
+
+<br/>
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/YsdlcQoHqPY?si=0xVAbpHwfg5gTlWj" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>

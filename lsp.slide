@@ -250,6 +250,7 @@ LSP
 - Notification
 - Server lifecycle
 - Capabilities
+- The ways gopls fulfilling requests are implementation details, not concern of LSP
 
 ## Explore more
 
@@ -261,7 +262,7 @@ TJ DeVries - Learn By Building: Language Server Protocol
 
 ## Explore more
 
-How does gopls find definition actually?
+The weapon used by gopls to find definition
 
 [go/types](https://docs.google.com/presentation/d/13OvHYozAUBeISPRoLgG7kMBuja1NsU1D_mMlmbaYojk/view#slide=id.p)
 

@@ -258,3 +258,13 @@ TJ DeVries - Learn By Building: Language Server Protocol
 <br/>
 
 <iframe width="560" height="315" src="https://www.youtube.com/embed/YsdlcQoHqPY?si=0xVAbpHwfg5gTlWj" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+## Explore more
+
+How does gopls find definition actually?
+
+[go/types](https://docs.google.com/presentation/d/13OvHYozAUBeISPRoLgG7kMBuja1NsU1D_mMlmbaYojk/view#slide=id.p)
+
+<br/>
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/p_cz7AxVdfg?si=RPbtIHRkq-VawM0t" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
